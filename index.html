@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pourquoi Wikipédia n'affiche-t-il pas de photo pour cet article ?</title>
+  <meta name="description" content="Outil d'analyse pour comprendre pourquoi Wikipédia ne sélectionne pas d'image de présentation pour un article.">
+  <link rel="stylesheet" href="style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🔍</text></svg>">
+</head>
+<body>
+  <div class="app-container">
+    <!-- En-tête -->
+    <header class="app-header">
+      <div class="header-content">
+        <div class="header-badge">Outil Wikimedia / MediaWiki</div>
+        <h1>Pourquoi Wikipédia n'affiche pas de photo ?</h1>
+        <p class="subtitle">
+          Analysez en quelques secondes pourquoi un article Wikipédia n'a pas d'image de présentation,
+          et ce qu'il faut faire pour y remédier.
+        </p>
+      </div>
+      <div class="theme-toggle-container">
+        <button id="themeToggleBtn" class="btn-theme" type="button" title="Changer le thème">
+          <span class="theme-icon">🌙</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Zone de recherche -->
+    <section class="search-card">
+      <form id="searchForm" class="search-form">
+        <div class="search-row">
+          <div class="input-group">
+            <label for="articleInput">Titre ou URL de l'article (Wikipédia en français) :</label>
+            <div class="input-with-button">
+              <input
+                type="text"
+                id="articleInput"
+                class="input-text main-input"
+                placeholder="Ex: Infiniti QX50, Jean-Claude Abrioux, Tour Eiffel, ou collez une URL fr.wikipedia.org..."
+                required
+                autocomplete="off"
+              >
+              <button type="submit" id="submitBtn" class="btn btn-primary">
+                <span class="btn-icon">⚡</span> Analyser
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Exemples rapides -->
+        <div class="quick-samples">
+          <span class="samples-label">Cas types à tester :</span>
+          <button type="button" class="btn-chip" data-title="Infiniti QX50" title="Des photos sont présentes dans l'article, mais aucune tout en haut (intro ou infobox)">
+            🚗 Infiniti QX50 <span class="chip-desc">(Images plus bas dans l'article)</span>
+          </button>
+          <button type="button" class="btn-chip" data-title="Jean-Claude Abrioux" title="Utilise une silhouette par défaut qui est volontairement bloquée par Wikipédia">
+            👤 J-C. Abrioux <span class="chip-desc">(Silhouette / Image d'attente)</span>
+          </button>
+          <button type="button" class="btn-chip" data-title="Stay True" title="Aucune image sur l'ensemble de la page">
+            🎵 Stay True <span class="chip-desc">(0 image)</span>
+          </button>
+          <button type="button" class="btn-chip" data-title="Tour Eiffel" title="Article bien illustré avec une photo libre dans l'infobox">
+            🗼 Tour Eiffel <span class="chip-desc">(Succès photo libre)</span>
+          </button>
+          <button type="button" class="btn-chip" data-title="Eiffel Tower" title="Titre redirigeant vers Tour Eiffel">
+            ↪️ Eiffel Tower <span class="chip-desc">(Redirection)</span>
+          </button>
+        </div>
+      </form>
+    </section>
+
+    <!-- Zone de chargement & alertes -->
+    <div id="loadingIndicator" class="loading-state hidden">
+      <div class="spinner"></div>
+      <p id="loadingMessage">Interrogation de l'API Wikipédia...</p>
+    </div>
+
+    <div id="errorBanner" class="alert-box alert-error hidden">
+      <div class="alert-icon">⚠️</div>
+      <div class="alert-body">
+        <h3 id="errorTitle">Erreur lors de l'analyse</h3>
+        <p id="errorMessage"></p>
+      </div>
+    </div>
+
+    <!-- Résultats de l'analyse -->
+    <main id="resultsContainer" class="results-container hidden">
+
+      <!-- 1. Synthèse du verdict -->
+      <section id="verdictSection" class="verdict-card">
+        <div class="verdict-header">
+          <div class="verdict-header-main">
+            <div class="verdict-badge-wrapper">
+              <span id="verdictBadge" class="badge">Analyse terminée</span>
+            </div>
+            <h2 id="verdictTitle" class="verdict-title">Résultat du diagnostic</h2>
+            <p id="verdictSubtitle" class="verdict-subtitle"></p>
+          </div>
+          <div id="verdictImageBox" class="verdict-image-box hidden">
+            <img id="verdictImage" src="" alt="Image de présentation de l'article">
+            <a id="verdictImageName" class="verdict-image-name" href="#" target="_blank" rel="noopener"></a>
+          </div>
+        </div>
+
+        <div id="verdictExplanation" class="verdict-explanation">
+          <!-- Explications détaillées générées dynamiquement -->
+        </div>
+
+        <!-- Solutions recommandées -->
+        <div id="recommendationsBox" class="recommendations-box">
+          <div class="rec-title">
+            <span class="rec-icon">💡</span>
+            <strong>Ce que vous pouvez faire / Comment corriger :</strong>
+          </div>
+          <ul id="recommendationsList" class="recommendations-list">
+            <!-- Liste dynamique -->
+          </ul>
+        </div>
+      </section>
+
+      <!-- 2. Tableau détaillé des images candidates et scoring -->
+      <section class="candidates-card">
+        <div class="section-title-row">
+          <div>
+            <h3>Détail des images analysées</h3>
+            <p class="section-desc">
+              Wikipédia attribue une note à chaque image pour sélectionner la meilleure.
+              Les images situées plus bas dans l'article ou inadaptées (trop petites, déformées) sont écartées.
+            </p>
+          </div>
+          <div class="filter-controls">
+            <label>
+              <input type="checkbox" id="toggleAllImages"> Afficher aussi les images situées plus bas dans l'article
+            </label>
+          </div>
+        </div>
+
+        <div class="table-responsive">
+          <table class="candidates-table" id="candidatesTable">
+            <thead>
+              <tr>
+                <th>Aperçu</th>
+                <th>Fichier</th>
+                <th>Emplacement</th>
+                <th>Dimensions</th>
+                <th>Licence</th>
+                <th>Calcul du Score</th>
+                <th>Score Total</th>
+                <th>Décision</th>
+              </tr>
+            </thead>
+            <tbody id="candidatesTableBody">
+              <!-- Rempli par app.js -->
+            </tbody>
+          </table>
+        </div>
+        <div id="noCandidatesMessage" class="empty-state-notice hidden">
+          Aucune image trouvée sur cet article.
+        </div>
+      </section>
+
+
+      <!-- 3. Guide de rappel des règles PageImages -->
+      <section class="rules-card">
+        <details class="rules-details">
+          <summary>
+            <span class="summary-icon">📖</span>
+            <strong>Comment Wikipédia choisit-il l'image principale d'un article ?</strong>
+          </summary>
+          <div class="rules-content">
+            <div class="rules-grid">
+              <div class="rule-item">
+                <h4>1. En haut de page uniquement (Introduction & Infobox)</h4>
+                <p>
+                  Wikipédia ne cherche une image d'illustration que <strong>tout en haut de la page</strong> :
+                  soit dans l'<strong>infobox</strong> (le cadre résumé à droite), soit dans les <strong>paragraphes d'introduction</strong>
+                  (avant le premier titre de chapitre). Les images situées plus bas dans l'article sont <em>totalement ignorées</em>.
+                </p>
+              </div>
+
+              <div class="rule-item">
+                <h4>2. Taille minimale (au moins 120 pixels)</h4>
+                <p>
+                  Toute image affichée en petite dimension (largeur inférieure à 120 px) est automatiquement écartée.
+                  Cela évite de sélectionner par erreur de petits drapeaux, des icônes de modèles ou des bandeaux d'ébauche.
+                </p>
+              </div>
+
+              <div class="rule-item">
+                <h4>3. Proportions naturelles de photo</h4>
+                <p>
+                  Les images excessivement étirées (panoramiques très larges) ou trop étroites (colonnes verticales)
+                  sont écartées au profit de photos aux proportions standards (paysage ou portrait classique).
+                </p>
+              </div>
+
+              <div class="rule-item">
+                <h4>4. Blocage des silhouettes et images d'attente</h4>
+                <p>
+                  Wikipédia bloque automatiquement les images de substitution génériques
+                  (comme la silhouette d'homme ou de femme par défaut, ou les logos « Image manquante »).
+                </p>
+              </div>
+
+              <div class="rule-item">
+                <h4>5. Licence libre obligatoire</h4>
+                <p>
+                  L'image de présentation doit être <strong>libre de droits</strong>
+                  (sur Wikimedia Commons sous licence Creative Commons ou Domaine Public). Les logos protégés par le droit d'auteur
+                  sont exclus et ne peuvent pas servir d'image de présentation.
+                </p>
+              </div>
+
+              <div class="rule-item">
+                <h4>6. Priorité manuelle pour les contributeurs</h4>
+                <p>
+                  Sur Wikipédia, les éditeurs peuvent forcer la sélection d'une image en ajoutant
+                  <code>|class=pageimage</code> dans le wikitext de l'image (ou <code>|class=notpageimage</code> pour l'interdire).
+                </p>
+              </div>
+            </div>
+          </div>
+        </details>
+      </section>
+
+    </main>
+
+    <!-- Pied de page -->
+    <footer class="app-footer">
+      <p>
+        Outil d'analyse client-side pour Wikipédia &bull;
+        Basé sur <a href="https://www.mediawiki.org/wiki/Extension:PageImages" target="_blank" rel="noopener">Extension:PageImages</a>
+        et <a href="https://en.wikipedia.org/wiki/Wikipedia:Page_image_selection" target="_blank" rel="noopener">Page Image Selection</a>.
+      </p>
+    </footer>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
